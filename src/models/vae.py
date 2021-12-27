@@ -1,6 +1,7 @@
 from operator import mul
 from functools import reduce
 from math import sqrt
+
 import torch
 from torch import nn
 from scipy.stats import ortho_group
