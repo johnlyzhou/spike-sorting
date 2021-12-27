@@ -1,3 +1,3 @@
 # Spike Sorting
 
-Working on dimensionality reduction of neural recording waveforms and clustering.
+Work in progress on dimensionality reduction of spike waveforms and downstream clustering.
