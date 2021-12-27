@@ -1,3 +1,3 @@
 # Spike Sorting
 
-Work in progress on dimensionality reduction of spike waveforms and downstream clustering.
+Spike waveform featurization using variational autoencoders with evaluation on downstream clustering ARI.
