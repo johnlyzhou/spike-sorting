@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.optimize as optim_ls
 from tqdm import tqdm
 
-from optimization_metrics import minimize_ls
+from src.data.optimization_metrics import minimize_ls
 
 
 TOTAL_NUM_CHANNELS = 384  # For Neuropixels 2.0 probe
