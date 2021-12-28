@@ -10,7 +10,6 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
     location and estimate its new PTP amplitude on each recording channel.
     """
     gamma = stats.gamma
-    # y = gamma.rvs(a, loc, scale, size=size)
     alpha = gamma.rvs(a, loc, scale, size=n_samples)
     y = np.random.uniform(0, 150, n_samples)
     x_z = np.zeros((2, n_samples))
@@ -36,7 +35,6 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
     for i in tqdm(range(n_samples)):
         idx_temp = np.random.choice(np.arange(positions_templates.shape[0]))
         idx_units[i] = idx_temp
-        # scaling_factor = np.random.uniform(0.8, 1.5)
         for j in range(channels_pos.shape[0]):
             predicted_ptp = positions_templates[idx_temp, 3] / ((([positions_templates[idx_temp, 0],
                                                                    positions_templates[idx_temp, 1]] -
