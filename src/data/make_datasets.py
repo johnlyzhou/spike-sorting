@@ -47,35 +47,35 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
 
 
-def positional_invariance_dataset(templates, positions_templates, channels_pos, a, loc, scale, perturb_param="x",
+def positional_invariance_dataset(templates, positions_templates, channels_pos, a, loc, scale, vary_feature="x",
                                   n_samples=100):
     """
     Produces a dataset to find positional invariance among learned features. Repeatedly sample the specified
-    position parameter that we want to perturb (exactly the same as for the featurization dataset), but samples all
-    other parameters (4 of 5: x, y, z, alpha, template) only once and holds them constant for all samples.
+    position feature that we want to vary (exactly the same as for the featurization dataset), but sample all
+    other parameters (4 of 5: x, y, z, alpha, template) once only and hold them constant for all samples.
     """
     gamma = stats.gamma
-    if perturb_param != "alpha":
+    if vary_feature != "alpha":
         alpha_const = gamma.rvs(a, loc, scale)
         alpha = np.full(n_samples, alpha_const)
     else:
         alpha = gamma.rvs(a, loc, scale, size=n_samples)
 
-    if perturb_param != "y":
+    if vary_feature != "y":
         y_const = np.random.uniform(0, 150)
         y = np.full(n_samples, y_const)
     else:
         y = np.random.uniform(0, 150, n_samples)
 
     x_z = np.zeros((2, n_samples))
-    if perturb_param != "x":
+    if vary_feature != "x":
         x_const = np.random.uniform(-150, 182)
         x_z[0, :] = np.full(n_samples, x_const)
     else:
         x_z[0, :] = np.random.uniform(-150, 182, n_samples)
 
     chan_pos_mean = channels_pos[:, 1].mean()
-    if perturb_param != "z":
+    if vary_feature != "z":
         z_const = np.random.normal(chan_pos_mean, 25)
         x_z[1, :] = np.full(n_samples, z_const)
     else:
@@ -84,12 +84,12 @@ def positional_invariance_dataset(templates, positions_templates, channels_pos, 
     idxbool = (y ** 2 + (x_z[0, :] - 16) ** 2 > 150 ** 2)
     num_outside = idxbool.sum()
     while num_outside > 0:
-        if perturb_param != "y":
+        if vary_feature != "y":
             y_const = np.random.uniform(0, 150)
             y = np.full(n_samples, y_const)
         else:
             y[idxbool] = np.random.uniform(0, 150, num_outside)
-        if perturb_param != "x":
+        if vary_feature != "x":
             x_const = np.random.uniform(-150, 182)
             x_z[0, :] = np.full(n_samples, x_const)
         else:
