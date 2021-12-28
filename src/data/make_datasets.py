@@ -3,7 +3,7 @@ import scipy.stats as stats
 from tqdm import tqdm
 
 
-def featurization_dataset(templates, positions_templates, channels_pos, a, loc, scale, size, n_samples=10000):
+def featurization_dataset(templates, positions_templates, channels_pos, a, loc, scale, n_samples=10000):
     """
     Produces a dataset for feature learning. For each sample, randomly sample a template and position parameters
     x, y, z, and alpha, then use the point cloud model from Boussard et al. 2021 to project that template to a new
@@ -117,7 +117,7 @@ def positional_invariance_dataset(templates, positions_templates, channels_pos, 
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
 
 
-def clustering_dataset(templates, positions_templates, channels_pos, a, loc, scale, size, n_clusters=20,
+def clustering_dataset(templates, positions_templates, channels_pos, a, loc, scale, n_clusters=20,
                        num_samples_per_cluster=100):
     """
     Produces a dataset for feature evaluation on evaluation performance. For each cluster, randomly sample a
@@ -128,9 +128,12 @@ def clustering_dataset(templates, positions_templates, channels_pos, a, loc, sca
     Note: unlike the featurization and positional invariance datasets, we do not (yet) conduct an "outside"
     position check after adding drift.
     """
+    if templates.shape[0] < n_clusters:
+        raise ValueError("Too few templates available to create desired number of clusters.")
+
     gamma = stats.gamma
 
-    # For each cluster, randomly select a template and mean position
+    # For each cluster, randomly select a mean position
     mean_alpha = gamma.rvs(a, loc, scale, size=n_clusters)
     mean_x_z = np.zeros((2, n_clusters))
     mean_x_z[0, :] = np.random.uniform(-150, 182, n_clusters)
@@ -156,7 +159,8 @@ def clustering_dataset(templates, positions_templates, channels_pos, a, loc, sca
     x_z = np.random.normal(mean_x_z, 20)
     y = np.random.normal(mean_y, 20)
 
-    new_templates = np.zeros((n_clusters * num_samples_per_cluster, templates.shape[1], templates.shape[2]))
+    new_templates = np.zeros((n_clusters * num_samples_per_cluster, templates.shape[1],
+                              templates.shape[2]))
     relocated_positions = np.zeros((4, n_clusters * num_samples_per_cluster))
     relocated_positions[:2] = x_z
     relocated_positions[2] = y
@@ -165,7 +169,7 @@ def clustering_dataset(templates, positions_templates, channels_pos, a, loc, sca
     idx_temps = np.random.choice(np.arange(positions_templates.shape[0]), size=n_clusters, replace=False)
 
     i = 0
-    for k in range(n_clusters):
+    for k in tqdm(range(n_clusters)):
         idx_temp = idx_temps[k]
         for j in range(num_samples_per_cluster):
             idx_units[i] = idx_temp
