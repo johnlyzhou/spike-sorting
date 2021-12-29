@@ -11,14 +11,9 @@ setup(
 # Set up directories
 repo_dir = os.path.dirname(os.path.realpath(__file__))
 
-data_dir = Path(f"{repo_dir}/data")
-raw_data_dir = Path(f"{data_dir}/raw")
-process_data_dir = Path(f"{data_dir}/processed")
-figures_dir = Path(f"{repo_dir}/figures")
-experiments_dir = Path(f"{repo_dir}/experiments")
+dir_names = ["data", "data/raw", "data/processed", "figures", "experiments"]
 
-data_dir.mkdir(parents=True, exist_ok=True)
-raw_data_dir.mkdir(parents=True, exist_ok=True)
-process_data_dir.mkdir(parents=True, exist_ok=True)
-figures_dir.mkdir(parents=True, exist_ok=True)
-experiments_dir.mkdir(parents=True, exist_ok=True)
+for dir_name in dir_names:
+    dir_path = Path(f"{repo_dir}/{dir_name}")
+    dir_path.mkdir(parents=True, exist_ok=True)
+
