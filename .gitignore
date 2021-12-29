@@ -1,5 +1,7 @@
 /data
-figures/
+/figures
+/experiments
+
 .ipynb_checkpoints
 .idea
 *.egg-info/
