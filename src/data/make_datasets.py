@@ -1,8 +1,26 @@
 import numpy as np
+from pathlib import Path
 import scipy.stats as stats
 from tqdm import tqdm
 
 
+def dataset_saver(func):
+    def wrapper_dataset_saver(*args, experiment_data_dir, experiment_name, **kwargs):
+        templates, predicted_ptps, positions, idx_units = func(*args, **kwargs)
+        experiment_dir = Path(f"{experiment_data_dir}/{experiment_name}")
+        experiment_dir.mkdir(parents=True, exist_ok=True)
+        print("Saving templates to folder {}, array of size: {}".format(experiment_dir, templates.shape))
+        np.save("{}/templates.npy".format(experiment_dir), templates)
+        print("Saving predicted PTPs to folder {}, array of size: {}".format(experiment_dir, predicted_ptps.shape))
+        np.save("{}/predicted_ptps.npy".format(experiment_dir), predicted_ptps)
+        print("Saving positions to folder {}, array of size: {}".format(experiment_dir, positions.shape))
+        np.save("{}/positions.npy".format(experiment_dir), positions)
+        print("Saving unit indices to folder {}, array of size: {}".format(experiment_dir, idx_units.shape))
+        np.save("{}/unit_idxs.npy".format(experiment_dir), idx_units)
+    return wrapper_dataset_saver
+
+
+@dataset_saver
 def featurization_dataset(templates, positions_templates, channels_pos, a, loc, scale, n_samples=10000):
     """
     Produces a dataset for feature learning. For each sample, randomly sample a template and position parameters
@@ -45,6 +63,7 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
 
 
+@dataset_saver
 def positional_invariance_dataset(templates, positions_templates, channels_pos, a, loc, scale, vary_feature="x",
                                   n_samples=100):
     """
@@ -115,6 +134,7 @@ def positional_invariance_dataset(templates, positions_templates, channels_pos, 
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
 
 
+@dataset_saver
 def clustering_dataset(templates, positions_templates, channels_pos, a, loc, scale, n_clusters=20,
                        num_samples_per_cluster=100):
     """
