@@ -28,4 +28,9 @@ Install local packages and set up directory structure:
 ```
 pip install -e .
 ```
-Launch `example.ipynb` in the `notebooks` directory with software of choice (Jupyter Notebook, Google Colab, etc.) to see how to use this package!
+To generate your own artificial datasets, you will need a library of waveform templates and a description of your probe geometry. We include the data used in our example analysis in `data/raw`. As of now, this package is designed for Neuropixels 2.0 probes, with tentative plans to expand to other geometries in the future.
+
+Launch Jupyter notebook and open `example.ipynb` in the `notebooks` directory to see how to use this package!
+```
+jupyter notebook
+```
