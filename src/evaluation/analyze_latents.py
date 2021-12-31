@@ -1,27 +1,20 @@
 from pathlib import Path
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from matplotlib import pyplot as plt
+
+from src.models.spike_vaes import SpikeSortingVAE
 
 
-def plot_template_reconstructions(og_templates, reconstructed_templates, n_channels=20, n_samples=20, out_fname=None):
-    """
-    Plot and save a specified number of sample reconstructed waveforms overlaid against the original waveforms.
-    """
-    pdf = mpl.backends.backend_pdf.PdfPages(out_fname)
+def get_latents(model_fname, templates_fname):
+    ss_model = SpikeSortingVAE.load_from_checkpoint(model_fname)
+    x = np.load(templates_fname)
+    x = torch.tensor(x).float()
+    latent_rep, _ = ss_model.model.encode(x)
+    latent_rep_np = latent_rep.detach().numpy()
 
-    for i in range(n_samples):
-        fig = plt.figure(figsize=(n_channels, 2.5))
-        plt.plot(reconstructed_templates[i, :80, :].T.flatten(), color='red')
-        for j in range(n_channels - 1):
-            plt.axvline(80 + 80 * j, color='black')
-        plt.plot(og_templates[i, :80, :].T.flatten(), color='blue')
-        for j in range(n_channels - 1):
-            plt.axvline(80 + 80 * j, color='black')
-        plt.title("Reconstructed: {}".format(i))
-        pdf.savefig(fig)
-
-    pdf.close()
+    return latent_rep_np
 
 
 def plot_latent_features_vs_position(latent_reps, positions, data_dir, vary_feature="x"):
