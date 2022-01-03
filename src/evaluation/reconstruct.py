@@ -3,7 +3,7 @@ import torch
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-from src.models.spike_vaes import SpikeSortingVAE
+from src.models.spike_vae_module import SpikeSortingVAE
 
 
 def get_reconstructions(model_fname, templates_fname):

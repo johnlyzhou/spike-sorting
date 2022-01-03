@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
-from src.models.spike_vaes import SpikeSortingVAE
+from src.models.spike_vae_module import SpikeSortingVAE
 
 
 def get_latents(model_fname, templates_fname):

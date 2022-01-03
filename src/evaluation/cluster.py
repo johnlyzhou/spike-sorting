@@ -1,11 +1,12 @@
 import numpy as np
+import networkx as nx
 import torch
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from sklearn.metrics import adjusted_rand_score
 
-from src.models.spike_vaes import SpikeSortingPSVAE
+from src.models.spike_vae_module import SpikeSortingPSVAE
 
 
 def clustering_analysis(system_cls, checkpoint, templates, clusters):
