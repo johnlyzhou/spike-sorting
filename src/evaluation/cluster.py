@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from sklearn.metrics import adjusted_rand_score
 
-from src.models.spike_vae_module import SpikeSortingPSVAE
+from src.models.spike_psvae_module import SpikeSortingPSVAE
 
 
 def clustering_analysis(system_cls, checkpoint, templates, clusters):
