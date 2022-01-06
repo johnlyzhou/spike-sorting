@@ -4,10 +4,17 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 from src.models.spike_vae_module import SpikeSortingVAE
+from src.models.spike_psvae_module import SpikeSortingPSVAE
 
 
-def get_reconstructions(model_fname, templates_fname):
-    ss_model = SpikeSortingVAE.load_from_checkpoint(model_fname)
+def get_reconstructions(system_cls, model_fname, templates_fname):
+    if system_cls == SpikeSortingPSVAE:
+        ss_model = SpikeSortingPSVAE.load_from_checkpoint(model_fname)
+    elif system_cls == SpikeSortingVAE:
+        ss_model = SpikeSortingVAE.load_from_checkpoint(model_fname)
+    else:
+        raise NotImplementedError("Only implemented for PS-VAE and VAE!")
+
     x = np.load(templates_fname)
     x = torch.tensor(x).float()
     _, _, recon_latents = ss_model.model(x)

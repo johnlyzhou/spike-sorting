@@ -5,14 +5,21 @@ import torch
 from matplotlib import pyplot as plt
 
 from src.models.spike_vae_module import SpikeSortingVAE
+from src.models.spike_psvae_module import SpikeSortingPSVAE
 
 
-def get_latents(model_fname, templates_fname):
-    ss_model = SpikeSortingVAE.load_from_checkpoint(model_fname)
-    x = np.load(templates_fname)
-    x = torch.tensor(x).float()
-    latent_rep, _ = ss_model.model.encode(x)
-    latent_rep_np = latent_rep.detach().numpy()
+def get_latents(system_cls, model_fname, templates_fname):
+    model = system_cls.load_from_checkpoint(model_fname)
+    outputs = model(torch.tensor(np.load(templates_fname)).float())
+
+    if system_cls == SpikeSortingPSVAE:
+        supervised_latents = outputs[0].detach().numpy()
+        unsupervised_latents = outputs[1].detach().numpy()
+        latent_rep_np = np.hstack((supervised_latents, unsupervised_latents))
+    elif system_cls == SpikeSortingVAE:
+        latent_rep_np = outputs[0].detach().numpy()
+    else:
+        raise NotImplementedError("Only implemented for PS-VAE and VAE!")
 
     return latent_rep_np
 
