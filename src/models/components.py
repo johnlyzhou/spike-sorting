@@ -7,6 +7,38 @@ from torch import nn
 from scipy.stats import ortho_group
 
 
+class DiagLinear(nn.Module):
+    """Borrowed from https://github.com/themattinthehatt/behavenet"""
+
+    __constants__ = ['n_features']
+
+    def __init__(self, n_features: int, bias=True):
+        super(DiagLinear, self).__init__()
+        self.n_features = n_features
+        self.weight = nn.Parameter(torch.tensor(n_features).float())
+        if bias:
+            self.bias = nn.Parameter(torch.tensor(n_features).float())
+        else:
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        bound = 1 / sqrt(self.n_features)
+        nn.init.uniform_(self.weight, -bound, bound)
+        if self.bias is not None:
+            bound = 1 / sqrt(self.n_features)
+            nn.init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, input):
+        output = input.mul(self.weight)
+        if self.bias is not None:
+            output += self.bias
+        return output
+
+    def extra_repr(self):
+        return 'n_features={}, bias={}'.format(self.n_features, self.bias is not None)
+
+
 class ConvEncoder(nn.Module):
     def __init__(self, in_channels, conv_encoder_layers, use_batch_norm=False):
         super().__init__()
@@ -121,38 +153,6 @@ class VAE(nn.Module):
         mean, log_var = self.encode(x)
         z = self.sample(mean, log_var)
         return mean, log_var, self.decode(z)
-
-
-class DiagLinear(nn.Module):
-    """Borrowed from https://github.com/themattinthehatt/behavenet"""
-
-    __constants__ = ['n_features']
-
-    def __init__(self, n_features: int, bias=True):
-        super(DiagLinear, self).__init__()
-        self.n_features = n_features
-        self.weight = nn.Parameter(torch.tensor(n_features).float())
-        if bias:
-            self.bias = nn.Parameter(torch.tensor(n_features).float())
-        else:
-            self.register_parameter('bias', None)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        bound = 1 / sqrt(self.n_features)
-        nn.init.uniform_(self.weight, -bound, bound)
-        if self.bias is not None:
-            bound = 1 / sqrt(self.n_features)
-            nn.init.uniform_(self.bias, -bound, bound)
-
-    def forward(self, input):
-        output = input.mul(self.weight)
-        if self.bias is not None:
-            output += self.bias
-        return output
-
-    def extra_repr(self):
-        return 'n_features={}, bias={}'.format(self.n_features, self.bias is not None)
 
 
 class PSVAE(VAE):
