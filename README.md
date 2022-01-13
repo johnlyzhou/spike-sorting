@@ -30,7 +30,7 @@ pip install -e .
 ```
 To generate your own artificial datasets, you will need a library of waveform templates and a description of your probe geometry. We include the probe geometry used in our example analysis in `data/raw` and the templates (a larger file) [here](https://drive.google.com/file/d/1FY86UUkV-QdPpAMQGzNiU-wN3W9dtPLo/view?usp=sharing). As of now, this package is designed for [Neuropixels 2.0](https://www.science.org/doi/10.1126/science.abf4588) probes (Steinmetz et al. 2021), with tentative plans to expand to other geometries in the future.
 
-Launch Jupyter notebook and open `example.ipynb` in the `notebooks` directory to see how to use this package!
+Launch Jupyter notebook and open the examples in the `notebooks` directory to see how to use this package!
 ```
 jupyter notebook
 ```
