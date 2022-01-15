@@ -7,6 +7,10 @@ from tqdm import tqdm
 def dataset_saver(func):
     def wrapper_dataset_saver(*args, experiment_data_dir, experiment_name, **kwargs):
         templates, predicted_ptps, positions, idx_units = func(*args, **kwargs)
+
+        templates = time_center_templates(templates)
+        templates = normalize_inputs(templates)
+
         templates = templates.swapaxes(1, 2)
         positions = np.transpose(positions)
         experiment_dir = Path(f"{experiment_data_dir}/{experiment_name}")
