@@ -32,8 +32,6 @@ def plot_template_reconstructions(og_templates, reconstructed_templates, n_chann
     for i in range(n_samples):
         fig = plt.figure(figsize=(n_channels, 2.5))
         plt.plot(reconstructed_templates[i, :80, :].T.flatten(), color='red')
-        for j in range(n_channels - 1):
-            plt.axvline(80 + 80 * j, color='black')
         plt.plot(og_templates[i, :80, :].T.flatten(), color='blue')
         for j in range(n_channels - 1):
             plt.axvline(80 + 80 * j, color='black')
