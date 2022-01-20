@@ -29,13 +29,14 @@ def dataset_saver(func):
 
 
 @dataset_saver
-def featurization_dataset(templates, positions_templates, channels_pos, a, loc, scale, n_samples=10000,
-                          raw_rec_path=None):
+def featurization_dataset(templates, template_positions, channel_positions, a, loc, scale,
+                          n_samples=10000, raw_rec_path=None):
     """
     Produces a dataset for feature learning. For each sample, randomly sample a template and position parameters
     x, y, z, and alpha, then use the point cloud model from Boussard et al. 2021 to project that template to a new
     location and estimate its new PTP amplitude on each recording channel.
     """
+
     num_templates, num_timesteps, num_channels = templates.shape
 
     if raw_rec_path:
@@ -54,7 +55,7 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
     y = np.random.uniform(0, 150, n_samples)
     x_z = np.zeros((2, n_samples))
     x_z[0, :] = np.random.uniform(-150, 182, n_samples)
-    chan_pos_mean = channels_pos[:, 1].mean()
+    chan_pos_mean = channel_positions[:, 1].mean()
     x_z[1, :] = np.random.normal(chan_pos_mean, 25, n_samples)
 
     idxbool = (y ** 2 + (x_z[0, :] - 16) ** 2 > 150 ** 2)
@@ -73,7 +74,7 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
     new_templates = np.zeros((n_samples, templates.shape[1], templates.shape[2]))
 
     for i in tqdm(range(n_samples)):
-        idx_temp = np.random.choice(np.arange(positions_templates.shape[0]))
+        idx_temp = np.random.choice(np.arange(template_positions.shape[0]))
         idx_units[i] = idx_temp
 
         if raw_rec_path:
@@ -83,12 +84,12 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
             sample_noise = noise[noise_timesteps:noise_timesteps + num_timesteps,
                                  noise_chans:noise_chans + num_channels]
 
-        for j in range(channels_pos.shape[0]):
-            predicted_ptp = positions_templates[idx_temp, 3] / ((([positions_templates[idx_temp, 0],
-                                                                   positions_templates[idx_temp, 1]] -
-                                                                  channels_pos[j]) ** 2).sum() +
-                                                                positions_templates[idx_temp, 2] ** 2) ** 0.5
-            new_predicted_ptp = alpha[i] / (((x_z[:, i] - channels_pos[j]) ** 2).sum() + y[i] ** 2) ** 0.5
+        for j in range(channel_positions.shape[0]):
+            predicted_ptp = template_positions[idx_temp, 3] / ((([template_positions[idx_temp, 0],
+                                                                  template_positions[idx_temp, 1]] -
+                                                                 channel_positions[j]) ** 2).sum() +
+                                                               template_positions[idx_temp, 2] ** 2) ** 0.5
+            new_predicted_ptp = alpha[i] / (((x_z[:, i] - channel_positions[j]) ** 2).sum() + y[i] ** 2) ** 0.5
             new_templates[i, :, j] = templates[idx_temp, :, j] * new_predicted_ptp / predicted_ptp
             if raw_rec_path:
                 new_templates[i, :, j] += sample_noise[:, j]
@@ -97,7 +98,7 @@ def featurization_dataset(templates, positions_templates, channels_pos, a, loc, 
 
 
 @dataset_saver
-def positional_invariance_dataset(templates, positions_templates, channels_pos, a, loc, scale, vary_feature="x",
+def positional_invariance_dataset(templates, template_positions, channel_positions, a, loc, scale, vary_feature="x",
                                   n_samples=100):
     """
     Produces a dataset to find positional invariance among learned features. Repeatedly sample the specified
@@ -124,7 +125,7 @@ def positional_invariance_dataset(templates, positions_templates, channels_pos, 
     else:
         x_z[0, :] = np.random.uniform(-150, 182, n_samples)
 
-    chan_pos_mean = channels_pos[:, 1].mean()
+    chan_pos_mean = channel_positions[:, 1].mean()
     if vary_feature != "z":
         z_const = np.random.normal(chan_pos_mean, 25)
         x_z[1, :] = np.full(n_samples, z_const)
@@ -154,21 +155,21 @@ def positional_invariance_dataset(templates, positions_templates, channels_pos, 
     idx_units = np.zeros(n_samples)
     new_templates = np.zeros((n_samples, templates.shape[1], templates.shape[2]))
 
-    idx_temp = np.random.choice(np.arange(positions_templates.shape[0]))
+    idx_temp = np.random.choice(np.arange(template_positions.shape[0]))
     for i in tqdm(range(n_samples)):
         idx_units[i] = idx_temp
-        for j in range(channels_pos.shape[0]):
-            predicted_ptp = positions_templates[idx_temp, 3] / ((([positions_templates[idx_temp, 0],
-                                                                   positions_templates[idx_temp, 1]] -
-                                                                  channels_pos[j]) ** 2).sum() +
-                                                                positions_templates[idx_temp, 2] ** 2) ** 0.5
-            new_predicted_ptp = alpha[i] / (((x_z[:, i] - channels_pos[j]) ** 2).sum() + y[i] ** 2) ** 0.5
+        for j in range(channel_positions.shape[0]):
+            predicted_ptp = template_positions[idx_temp, 3] / ((([template_positions[idx_temp, 0],
+                                                                  template_positions[idx_temp, 1]] -
+                                                                 channel_positions[j]) ** 2).sum() +
+                                                               template_positions[idx_temp, 2] ** 2) ** 0.5
+            new_predicted_ptp = alpha[i] / (((x_z[:, i] - channel_positions[j]) ** 2).sum() + y[i] ** 2) ** 0.5
             new_templates[i, :, j] = templates[idx_temp, :, j] * new_predicted_ptp / predicted_ptp
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
 
 
 @dataset_saver
-def clustering_dataset(templates, positions_templates, channels_pos, a, loc, scale, n_clusters=20,
+def clustering_dataset(templates, template_positions, channel_positions, a, loc, scale, n_clusters=20,
                        num_samples_per_cluster=100, raw_rec_path=None):
     """
     Produces a dataset for feature evaluation on evaluation performance. For each cluster, randomly sample a
@@ -200,7 +201,7 @@ def clustering_dataset(templates, positions_templates, channels_pos, a, loc, sca
     mean_alpha = gamma.rvs(a, loc, scale, size=n_clusters)
     mean_x_z = np.zeros((2, n_clusters))
     mean_x_z[0, :] = np.random.uniform(-150, 182, n_clusters)
-    chan_pos_mean = channels_pos[:, 1].mean()
+    chan_pos_mean = channel_positions[:, 1].mean()
     mean_x_z[1, :] = np.random.normal(chan_pos_mean, 25, n_clusters)
     mean_y = np.random.uniform(0, 150, n_clusters)
 
@@ -243,10 +244,10 @@ def clustering_dataset(templates, positions_templates, channels_pos, a, loc, sca
             sample_noise = noise[noise_timesteps:noise_timesteps + num_timesteps,
                                  noise_chans:noise_chans + num_channels]
             for j in range(num_channels):
-                predicted_ptp = positions_templates[idx_temp, 3] / (((positions_templates[idx_temp, :1] -
-                                                                      channels_pos[j]) ** 2).sum() +
-                                                                    positions_templates[idx_temp, 2] ** 2) ** 0.5
-                new_predicted_ptp = alpha[i] / (((x_z[:, i] - channels_pos[j]) ** 2).sum() + y[i] ** 2) ** 0.5
+                predicted_ptp = template_positions[idx_temp, 3] / (((template_positions[idx_temp, :1] -
+                                                                     channel_positions[j]) ** 2).sum() +
+                                                                   template_positions[idx_temp, 2] ** 2) ** 0.5
+                new_predicted_ptp = alpha[i] / (((x_z[:, i] - channel_positions[j]) ** 2).sum() + y[i] ** 2) ** 0.5
                 new_templates[i, :, j] = templates[idx_temp, :, j] * new_predicted_ptp / predicted_ptp
 
                 if raw_rec_path:
@@ -256,12 +257,12 @@ def clustering_dataset(templates, positions_templates, channels_pos, a, loc, sca
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
 
 
-def time_center_templates(templates_chans):
-    centered_templates = np.zeros(templates_chans.shape)
-    for i in range(templates_chans.shape[0]):
-        mc = templates_chans[i].ptp(0).argmax()
-        offset = 42 - templates_chans[i, :, mc].argmin()
-        centered_templates[i] = np.roll(templates_chans[i], offset, axis=0)
+def time_center_templates(template_channels):
+    centered_templates = np.zeros(template_channels.shape)
+    for i in range(template_channels.shape[0]):
+        mc = template_channels[i].ptp(0).argmax()
+        offset = 42 - template_channels[i, :, mc].argmin()
+        centered_templates[i] = np.roll(template_channels[i], offset, axis=0)
     return centered_templates
 
 
