@@ -1,5 +1,6 @@
 /data/processed
 /data/raw/templates_yass.npy
+/data/raw/ten_np2_seconds.npy
 /figures
 /experiments
 
