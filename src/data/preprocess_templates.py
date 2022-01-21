@@ -53,10 +53,10 @@ def localize_wfs(waveforms_ptp, geom_array):
     """
     Estimate location of unit using optimization framework in Boussard et al. 2021.
     """
-    n_temp = waveforms_ptp.shape[0]
-    output = np.zeros((n_temp, 4))
-    channels_pos = geom_array[:waveforms_ptp.shape[1]]
-    for i in tqdm(range(n_temp)):
+    num_templates, num_channels = waveforms_ptp.shape
+    output = np.zeros((num_templates, 4))
+    channels_pos = geom_array[:num_channels]
+    for i in tqdm(range(num_templates)):
         y_init = 22
         z_com = (waveforms_ptp[i] * channels_pos[:, 1]).sum() / waveforms_ptp[i].sum()
         x_com = (waveforms_ptp[i] * channels_pos[:, 0]).sum() / waveforms_ptp[i].sum()

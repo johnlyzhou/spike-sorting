@@ -15,12 +15,22 @@ def time_center_templates(templates):
     return centered_templates
 
 
+def predict_ptp(template_position, channel_position):
+    """
+    Use the point cloud model from Boussard et al. 2021 to predict PTP amplitude on each recording channel.
+    """
+    x, y, z, alpha = template_position
+    x_c, z_c, = channel_position
+    predicted_ptp = alpha / (((np.array([x - x_c, z - z_c])) ** 2).sum() + z ** 2) ** 0.5
+    return predicted_ptp
+
+
 def dataset_saver(func):
     """
     Minor preprocessing of dataset method outputs and saves them to specified locations.
     """
-    def wrapper_dataset_saver(*args, experiment_data_dir, experiment_name, **kwargs):
 
+    def wrapper_dataset_saver(*args, experiment_data_dir, experiment_name, **kwargs):
         templates, predicted_ptps, positions, idx_units = func(*args, **kwargs)
 
         templates = time_center_templates(templates)
@@ -88,23 +98,17 @@ def featurization_dataset(templates, template_positions, channel_positions, a, l
         idx_temp = np.random.choice(np.arange(template_positions.shape[0]))
         idx_units[i] = idx_temp
 
-        # Add noise
         if noise_path:
             noise_timesteps = np.random.randint(num_timesteps_noise - num_timesteps)
             noise_chans = np.random.randint(num_channels_noise - num_channels)
             sample_noise = noise[noise_timesteps:noise_timesteps + num_timesteps,
                                  noise_chans:noise_chans + num_channels]
 
-        # Add temporal sampling shift
         resampled_template = resample_template(templates[idx_temp, :, :])
 
         for j in range(channel_positions.shape[0]):
-            predicted_ptp = template_positions[idx_temp, 3] / ((([template_positions[idx_temp, 0],
-                                                                  template_positions[idx_temp, 1]] -
-                                                                 channel_positions[j]) ** 2).sum() +
-                                                               template_positions[idx_temp, 2] ** 2) ** 0.5
-            new_predicted_ptp = alpha[i] / (
-                    ((np.append(x[i], z[i]) - channel_positions[j]) ** 2).sum() + y[i] ** 2) ** 0.5
+            predicted_ptp = predict_ptp(template_positions[idx_temp, :], channel_positions[j])
+            new_predicted_ptp = predict_ptp(relocated_positions[:, i], channel_positions[j])
             new_templates[i, :, j] = resampled_template[:, j] * new_predicted_ptp / predicted_ptp
 
             if noise_path:
@@ -183,21 +187,17 @@ def clustering_dataset(templates, template_positions, channel_positions, a, loc,
         for _ in range(num_samples_per_cluster):
             idx_units[i] = idx_temp
 
-            # Add temporal sampling shift
             resampled_template = resample_template(templates[idx_temp, :, :])
 
-            # Add noise
-            noise_timesteps = np.random.randint(num_timesteps_noise - num_timesteps)
-            noise_chans = np.random.randint(num_channels_noise - num_channels)
-            sample_noise = noise[noise_timesteps:noise_timesteps + num_timesteps,
-                                 noise_chans:noise_chans + num_channels]
+            if noise_path:
+                noise_timesteps = np.random.randint(num_timesteps_noise - num_timesteps)
+                noise_chans = np.random.randint(num_channels_noise - num_channels)
+                sample_noise = noise[noise_timesteps:noise_timesteps + num_timesteps,
+                                     noise_chans:noise_chans + num_channels]
 
             for j in range(num_channels):
-                predicted_ptp = template_positions[idx_temp, 3] / (((template_positions[idx_temp, :1] -
-                                                                     channel_positions[j]) ** 2).sum() +
-                                                                   template_positions[idx_temp, 2] ** 2) ** 0.5
-                new_predicted_ptp = alpha[i] / (((np.append(x[i], z[i]) -
-                                                  channel_positions[j]) ** 2).sum() + y[i] ** 2) ** 0.5
+                predicted_ptp = predict_ptp(template_positions[idx_temp, :], channel_positions[j])
+                new_predicted_ptp = predict_ptp(relocated_positions[:, i], channel_positions[j])
                 new_templates[i, :, j] = resampled_template[:, j] * new_predicted_ptp / predicted_ptp
 
                 if noise_path:
@@ -216,6 +216,9 @@ def positional_invariance_dataset(templates, template_positions, channel_positio
     position feature that we want to vary (exactly the same as for the featurization dataset), but sample all
     other parameters (4 of 5: x, y, z, alpha, template) once only and hold them constant for all samples.
     """
+
+    num_templates, num_timesteps, num_channels = templates.shape
+
     if vary_feature != "alpha":
         alpha_const = gamma.rvs(a, loc, scale)
         alpha = np.full(n_samples, alpha_const)
@@ -259,17 +262,13 @@ def positional_invariance_dataset(templates, template_positions, channel_positio
 
     relocated_positions = np.vstack((x, y, z, alpha))
     idx_units = np.zeros(n_samples)
-    new_templates = np.zeros((n_samples, templates.shape[1], templates.shape[2]))
+    new_templates = np.zeros((n_samples, num_timesteps, num_channels))
 
-    idx_temp = np.random.choice(np.arange(template_positions.shape[0]))
+    idx_temp = np.random.choice(np.arange(num_templates))
     for i in tqdm(range(n_samples)):
         idx_units[i] = idx_temp
-        for j in range(channel_positions.shape[0]):
-            predicted_ptp = template_positions[idx_temp, 3] / ((([template_positions[idx_temp, 0],
-                                                                  template_positions[idx_temp, 1]] -
-                                                                 channel_positions[j]) ** 2).sum() +
-                                                               template_positions[idx_temp, 2] ** 2) ** 0.5
-            new_predicted_ptp = alpha[i] / (((np.append(x[i], z[i]) - channel_positions[j]) ** 2).sum()
-                                            + y[i] ** 2) ** 0.5
+        for j in range(num_channels):
+            predicted_ptp = predict_ptp(template_positions[idx_temp, :], channel_positions[j])
+            new_predicted_ptp = predict_ptp(relocated_positions[:, i], channel_positions[j])
             new_templates[i, :, j] = templates[idx_temp, :, j] * new_predicted_ptp / predicted_ptp
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
