@@ -269,6 +269,7 @@ def positional_invariance_dataset(templates, template_positions, channel_positio
                                                                   template_positions[idx_temp, 1]] -
                                                                  channel_positions[j]) ** 2).sum() +
                                                                template_positions[idx_temp, 2] ** 2) ** 0.5
-            new_predicted_ptp = alpha[i] / (((np.append(x[i], z[i]) - channel_positions[j]) ** 2).sum() + y[i] ** 2) ** 0.5
+            new_predicted_ptp = alpha[i] / (((np.append(x[i], z[i]) - channel_positions[j]) ** 2).sum()
+                                            + y[i] ** 2) ** 0.5
             new_templates[i, :, j] = templates[idx_temp, :, j] * new_predicted_ptp / predicted_ptp
     return new_templates, new_templates.ptp(1), relocated_positions, idx_units
