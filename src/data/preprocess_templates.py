@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.optimize as optim_ls
+from scipy.interpolate import CubicSpline
+from scipy.optimize import least_squares
 from tqdm import tqdm
 
 from src.data.optimization_metrics import minimize_ls
@@ -17,19 +17,7 @@ def get_argmin_ptp(templates, max_chan_temp):
     argmin_ptp = np.zeros(templates.shape[0])
     for i in range(templates.shape[0]):
         argmin_ptp[i] = templates[i, :, max_chan_temp[i]].argmin()
-
-
-def plot_templates(templates, max_chan_temp, n_channels=20):
-    """
-    Use to pick out and remove bad templates, i.e. those that don't look like waveforms or have collisions.
-    """
-    for i in range(templates.shape[0]):
-        print(i)
-        plt.figure(figsize=(n_channels, 2.5))
-        plt.plot(templates[i, :80, max_chan_temp[i] - n_channels // 2:max_chan_temp[i] + n_channels // 2].T.flatten())
-        for j in range(19):
-            plt.axvline(80 + 80 * j, color='black')
-        plt.show()
+    return argmin_ptp
 
 
 def take_channel_range(templates, n_channels_loc=20):
@@ -63,7 +51,7 @@ def take_channel_range(templates, n_channels_loc=20):
 
 def localize_wfs(waveforms_ptp, geom_array):
     """
-    Estimate location of neuron producing waveform using optimization framework in Boussard et al. 2021.
+    Estimate location of unit using optimization framework in Boussard et al. 2021.
     """
     n_temp = waveforms_ptp.shape[0]
     output = np.zeros((n_temp, 4))
@@ -74,7 +62,16 @@ def localize_wfs(waveforms_ptp, geom_array):
         x_com = (waveforms_ptp[i] * channels_pos[:, 0]).sum() / waveforms_ptp[i].sum()
         alpha_init = waveforms_ptp[i].max() * (
                 (((channels_pos - [x_com, z_com]) ** 2).sum(1).min() + y_init ** 2) ** 0.5)
-        output[i] = optim_ls.least_squares(minimize_ls, x0=[x_com, z_com, y_init, alpha_init], bounds=(
+        output[i] = least_squares(minimize_ls, x0=[x_com, z_com, y_init, alpha_init], bounds=(
             [-150, -200, 0, 0], [182, 200, np.max([y_init + 10, 150]), np.max([alpha_init + 10, 10000])]),
                                            args=(waveforms_ptp[i], channels_pos), tr_solver='exact')['x']
     return output
+
+
+def resample_template(template):
+    num_timesteps, num_channels = template.shape
+    time_range = range(num_timesteps)
+    template_spline = CubicSpline(time_range, template, axis=0)
+    shift = np.random.rand()
+    resampled_template = np.array([template_spline(t + shift) for t in time_range])
+    return resampled_template
