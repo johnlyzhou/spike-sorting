@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 from src.data.preprocess_templates import get_max_chan_temps
 
 
-def plot_templates(templates, n_channels=20, n_templates=None):
+def plot_templates(templates, base_template=None, n_channels=20, n_templates=None):
     """
-    Templates should be of shape (num_samples, num_channels, num_timesteps).
+    Templates should be of shape (num_samples, num_timesteps, num_channels).
     """
     num_samples, num_timesteps, template_channels = templates.shape
 
@@ -25,6 +25,8 @@ def plot_templates(templates, n_channels=20, n_templates=None):
         else:
             plt.plot(templates[i, :80, max_chan_temp[i] - n_channels // 2:max_chan_temp[i]
                                + n_channels // 2].T.flatten(), color='blue')
+        if base_template is not None:
+            plt.plot(base_template[:80, :].T.flatten(), color='green')
         for j in range(n_channels - 1):
             plt.axvline(80 + 80 * j, color='black')
         plt.show()
