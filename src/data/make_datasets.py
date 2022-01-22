@@ -1,9 +1,9 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+from scipy.interpolate import CubicSpline
 from scipy.stats import gamma
 from tqdm import tqdm
-
-from src.data.preprocess_templates import resample_template
 
 
 def time_center_templates(templates):
@@ -17,19 +17,30 @@ def time_center_templates(templates):
 
 def predict_ptp(template_position, channel_position):
     """
-    Use the point cloud model from Boussard et al. 2021 to predict PTP amplitude on each recording channel.
+    Predict PTP amplitude on each recording channel using the point cloud model from Boussard et al. 2021.
     """
     x, y, z, alpha = template_position
-    x_c, z_c, = channel_position
+    x_c, z_c = channel_position
     predicted_ptp = alpha / (((np.array([x - x_c, z - z_c])) ** 2).sum() + z ** 2) ** 0.5
     return predicted_ptp
 
 
+def resample_template(template):
+    """
+    Random temporal shift in sampling intervals for a given template.
+    """
+    num_timesteps, num_channels = template.shape
+    time_range = range(num_timesteps)
+    template_spline = CubicSpline(time_range, template, axis=0)
+    shift = np.random.rand()
+    resampled_template = np.array([template_spline(t + shift) for t in time_range])
+    return resampled_template
+
+
 def dataset_saver(func):
     """
-    Minor preprocessing of dataset method outputs and saves them to specified locations.
+    Time-center and save datasets.
     """
-
     def wrapper_dataset_saver(*args, experiment_data_dir, experiment_name, **kwargs):
         templates, predicted_ptps, positions, idx_units = func(*args, **kwargs)
 
@@ -80,14 +91,14 @@ def featurization_dataset(templates, template_positions, channel_positions, a, l
     z = np.random.normal(chan_pos_mean, 25, n_samples)
     alpha = gamma.rvs(a, loc, scale, size=n_samples)
 
-    idxbool = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
-    num_outside = idxbool.sum()
+    outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
+    num_outside = outside_idxs.sum()
 
     while num_outside > 0:
-        x[idxbool] = np.random.uniform(-150, 182, num_outside)
-        y[idxbool] = np.random.uniform(0, 150, num_outside)
-        idxbool = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
-        num_outside = idxbool.sum()
+        x[outside_idxs] = np.random.uniform(-150, 182, num_outside)
+        y[outside_idxs] = np.random.uniform(0, 150, num_outside)
+        outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
+        num_outside = outside_idxs.sum()
 
     relocated_positions = np.vstack((x, y, z, alpha))
 
@@ -118,16 +129,15 @@ def featurization_dataset(templates, template_positions, channel_positions, a, l
 
 
 @dataset_saver
-def clustering_dataset(templates, template_positions, channel_positions, a, loc, scale, n_clusters=20,
-                       num_samples_per_cluster=100, noise_path=None):
+def clustering_dataset(templates, template_positions, channel_positions, a=3, loc=100, scale=500, n_clusters=20,
+                       num_samples_per_cluster=100, x_var=20, y_var=20, z_var=10, noise_path=None):
     """
     Produces a dataset for feature evaluation on evaluation performance. For each cluster, randomly sample a
     template and set of mean position parameters x, y, z, and alpha. Then add some Gaussian noise to each positional
     parameter (variance arbitrarily selected as of now based on evaluation performance) and generate resulting
     waveforms.
 
-    Note: unlike the featurization and positional invariance datasets, we do not (yet) conduct an "outside"
-    position check after adding drift.
+    Note: drift sampling means there is the potential for templates to be projected outside of normal ranges.
     """
     num_templates, num_timesteps, num_channels = templates.shape
 
@@ -153,13 +163,13 @@ def clustering_dataset(templates, template_positions, channel_positions, a, loc,
     mean_z = np.random.normal(chan_pos_mean, 25, n_clusters)
     mean_alpha = gamma.rvs(a, loc, scale, size=n_clusters)
 
-    idxbool = (mean_y ** 2 + (mean_x - 16) ** 2 > 150 ** 2)
-    num_outside = idxbool.sum()
+    outside_idxs = (mean_y ** 2 + (mean_x - 16) ** 2 > 150 ** 2)
+    num_outside = outside_idxs.sum()
     while num_outside > 0:
-        mean_x[idxbool] = np.random.uniform(-150, 182, num_outside)
-        mean_y[idxbool] = np.random.uniform(0, 150, num_outside)
-        idxbool = (mean_y ** 2 + (mean_x - 16) ** 2 > 150 ** 2)
-        num_outside = idxbool.sum()
+        mean_x[outside_idxs] = np.random.uniform(-150, 182, num_outside)
+        mean_y[outside_idxs] = np.random.uniform(0, 150, num_outside)
+        outside_idxs = (mean_y ** 2 + (mean_x - 16) ** 2 > 150 ** 2)
+        num_outside = outside_idxs.sum()
 
     # Now repeat each mean by the number of samples desired per cluster
     mean_x = np.repeat(mean_x, num_samples_per_cluster)
@@ -168,10 +178,10 @@ def clustering_dataset(templates, template_positions, channel_positions, a, loc,
     mean_alpha = np.repeat(mean_alpha, num_samples_per_cluster)
 
     # Apply "drift" for every sample
-    alpha = np.random.normal(mean_alpha, 200)
-    x = np.random.normal(mean_x, 20)
-    y = np.random.normal(mean_y, 20)
-    z = np.random.normal(mean_z, 20)
+    alpha = gamma.rvs(a) * mean_alpha
+    x = np.random.normal(mean_x, x_var)
+    y = np.abs(np.random.normal(mean_y, y_var))
+    z = np.random.normal(mean_z, z_var)
 
     relocated_positions = np.vstack((x, y, z, alpha))
 
@@ -244,21 +254,21 @@ def positional_invariance_dataset(templates, template_positions, channel_positio
     else:
         z = np.random.normal(chan_pos_mean, 25, n_samples)
 
-    idxbool = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
-    num_outside = idxbool.sum()
+    outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
+    num_outside = outside_idxs.sum()
     while num_outside > 0:
         if vary_feature != "y":
             y_const = np.random.uniform(0, 150)
             y = np.full(n_samples, y_const)
         else:
-            y[idxbool] = np.random.uniform(0, 150, num_outside)
+            y[outside_idxs] = np.random.uniform(0, 150, num_outside)
         if vary_feature != "x":
             x_const = np.random.uniform(-150, 182)
             x = np.full(n_samples, x_const)
         else:
-            x[idxbool] = np.random.uniform(-150, 182, num_outside)
-        idxbool = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
-        num_outside = idxbool.sum()
+            x[outside_idxs] = np.random.uniform(-150, 182, num_outside)
+        outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
+        num_outside = outside_idxs.sum()
 
     relocated_positions = np.vstack((x, y, z, alpha))
     idx_units = np.zeros(n_samples)

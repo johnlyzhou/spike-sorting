@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.interpolate import CubicSpline
 from scipy.optimize import least_squares
 from tqdm import tqdm
 
@@ -67,11 +66,3 @@ def localize_wfs(waveforms_ptp, geom_array):
                                            args=(waveforms_ptp[i], channels_pos), tr_solver='exact')['x']
     return output
 
-
-def resample_template(template):
-    num_timesteps, num_channels = template.shape
-    time_range = range(num_timesteps)
-    template_spline = CubicSpline(time_range, template, axis=0)
-    shift = np.random.rand()
-    resampled_template = np.array([template_spline(t + shift) for t in time_range])
-    return resampled_template
