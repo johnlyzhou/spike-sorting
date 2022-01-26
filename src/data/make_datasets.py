@@ -6,6 +6,11 @@ from scipy.stats import gamma
 from tqdm import tqdm
 
 
+NP2_X_BOUNDS = (-150, 182)
+NP2_Y_BOUNDS = (0, 150)
+NP2_Z_VAR = 25
+
+
 def time_center_templates(templates):
     centered_templates = np.zeros(templates.shape)
     for i in range(templates.shape[0]):
@@ -86,17 +91,17 @@ def featurization_dataset(templates, template_positions, channel_positions, a, l
 
     chan_pos_mean = channel_positions[:, 1].mean()
 
-    x = np.random.uniform(-150, 182, n_samples)
-    y = np.random.uniform(0, 150, n_samples)
-    z = np.random.normal(chan_pos_mean, 25, n_samples)
+    x = np.random.uniform(*NP2_X_BOUNDS, n_samples)
+    y = np.random.uniform(*NP2_Y_BOUNDS, n_samples)
+    z = np.random.normal(chan_pos_mean, NP2_Z_VAR, n_samples)
     alpha = gamma.rvs(a, loc, scale, size=n_samples)
 
     outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
     num_outside = outside_idxs.sum()
 
     while num_outside > 0:
-        x[outside_idxs] = np.random.uniform(-150, 182, num_outside)
-        y[outside_idxs] = np.random.uniform(0, 150, num_outside)
+        x[outside_idxs] = np.random.uniform(*NP2_X_BOUNDS, num_outside)
+        y[outside_idxs] = np.random.uniform(*NP2_Y_BOUNDS, num_outside)
         outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
         num_outside = outside_idxs.sum()
 
@@ -130,7 +135,7 @@ def featurization_dataset(templates, template_positions, channel_positions, a, l
 
 @dataset_saver
 def clustering_dataset(templates, template_positions, channel_positions, a=3, loc=100, scale=500, n_clusters=20,
-                       num_samples_per_cluster=100, x_var=20, y_var=20, z_var=10, noise_path=None):
+                       num_samples_per_cluster=100, x_drift=20, y_drift=20, z_drift=10, noise_path=None):
     """
     Produces a dataset for feature evaluation on evaluation performance. For each cluster, randomly sample a
     template and set of mean position parameters x, y, z, and alpha. Then add some Gaussian noise to each positional
@@ -158,16 +163,16 @@ def clustering_dataset(templates, template_positions, channel_positions, a=3, lo
     chan_pos_mean = channel_positions[:, 1].mean()
 
     # For each cluster, randomly select a mean position
-    mean_x = np.random.uniform(-150, 182, n_clusters)
-    mean_y = np.random.uniform(0, 150, n_clusters)
-    mean_z = np.random.normal(chan_pos_mean, 25, n_clusters)
+    mean_x = np.random.uniform(*NP2_X_BOUNDS, n_clusters)
+    mean_y = np.random.uniform(*NP2_Y_BOUNDS, n_clusters)
+    mean_z = np.random.normal(chan_pos_mean, NP2_Z_VAR, n_clusters)
     mean_alpha = gamma.rvs(a, loc, scale, size=n_clusters)
 
     outside_idxs = (mean_y ** 2 + (mean_x - 16) ** 2 > 150 ** 2)
     num_outside = outside_idxs.sum()
     while num_outside > 0:
-        mean_x[outside_idxs] = np.random.uniform(-150, 182, num_outside)
-        mean_y[outside_idxs] = np.random.uniform(0, 150, num_outside)
+        mean_x[outside_idxs] = np.random.uniform(*NP2_X_BOUNDS, num_outside)
+        mean_y[outside_idxs] = np.random.uniform(*NP2_Y_BOUNDS, num_outside)
         outside_idxs = (mean_y ** 2 + (mean_x - 16) ** 2 > 150 ** 2)
         num_outside = outside_idxs.sum()
 
@@ -179,9 +184,9 @@ def clustering_dataset(templates, template_positions, channel_positions, a=3, lo
 
     # Apply "drift" for every sample
     alpha = gamma.rvs(a) * mean_alpha
-    x = np.random.normal(mean_x, x_var)
-    y = np.abs(np.random.normal(mean_y, y_var))
-    z = np.random.normal(mean_z, z_var)
+    x = np.random.normal(mean_x, x_drift)
+    y = np.abs(np.random.normal(mean_y, y_drift))
+    z = np.random.normal(mean_z, z_drift)
 
     relocated_positions = np.vstack((x, y, z, alpha))
 
@@ -236,37 +241,37 @@ def positional_invariance_dataset(templates, template_positions, channel_positio
         alpha = gamma.rvs(a, loc, scale, size=n_samples)
 
     if vary_feature != "y":
-        y_const = np.random.uniform(0, 150)
+        y_const = np.random.uniform(*NP2_Y_BOUNDS)
         y = np.full(n_samples, y_const)
     else:
-        y = np.random.uniform(0, 150, n_samples)
+        y = np.random.uniform(*NP2_Y_BOUNDS, n_samples)
 
     if vary_feature != "x":
-        x_const = np.random.uniform(-150, 182)
+        x_const = np.random.uniform(*NP2_X_BOUNDS)
         x = np.full(n_samples, x_const)
     else:
-        x = np.random.uniform(-150, 182, n_samples)
+        x = np.random.uniform(*NP2_X_BOUNDS, n_samples)
 
     chan_pos_mean = channel_positions[:, 1].mean()
     if vary_feature != "z":
-        z_const = np.random.normal(chan_pos_mean, 25)
+        z_const = np.random.normal(chan_pos_mean, NP2_Z_VAR)
         z = np.full(n_samples, z_const)
     else:
-        z = np.random.normal(chan_pos_mean, 25, n_samples)
+        z = np.random.normal(chan_pos_mean, NP2_Z_VAR, n_samples)
 
     outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
     num_outside = outside_idxs.sum()
     while num_outside > 0:
         if vary_feature != "y":
-            y_const = np.random.uniform(0, 150)
+            y_const = np.random.uniform(*NP2_Y_BOUNDS)
             y = np.full(n_samples, y_const)
         else:
-            y[outside_idxs] = np.random.uniform(0, 150, num_outside)
+            y[outside_idxs] = np.random.uniform(*NP2_Y_BOUNDS, num_outside)
         if vary_feature != "x":
-            x_const = np.random.uniform(-150, 182)
+            x_const = np.random.uniform(*NP2_X_BOUNDS)
             x = np.full(n_samples, x_const)
         else:
-            x[outside_idxs] = np.random.uniform(-150, 182, num_outside)
+            x[outside_idxs] = np.random.uniform(*NP2_X_BOUNDS, num_outside)
         outside_idxs = (y ** 2 + (x - 16) ** 2 > 150 ** 2)
         num_outside = outside_idxs.sum()
 

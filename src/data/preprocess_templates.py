@@ -5,7 +5,7 @@ from tqdm import tqdm
 from src.data.optimization_metrics import minimize_ls
 
 
-TOTAL_NUM_CHANNELS = 384  # For Neuropixels 2.0 probe
+NP2_TOTAL_CHANNELS = 384  # For Neuropixels 2.0 probe
 
 
 def get_max_chan_temps(templates):
@@ -30,8 +30,8 @@ def take_channel_range(templates, n_channels_loc=20):
         mc = templates[i].ptp(0).argmax()
         if mc <= n_channels_loc // 2:
             channels_wfs = np.arange(0, n_channels_loc)
-        elif mc > TOTAL_NUM_CHANNELS - n_channels_loc:
-            channels_wfs = np.arange(TOTAL_NUM_CHANNELS - n_channels_loc, TOTAL_NUM_CHANNELS)
+        elif mc > NP2_TOTAL_CHANNELS - n_channels_loc:
+            channels_wfs = np.arange(NP2_TOTAL_CHANNELS - n_channels_loc, NP2_TOTAL_CHANNELS)
         else:
             up_or_down = templates[i].ptp(0)[mc + 2] > templates[i].ptp(0)[mc - 2]
             if up_or_down and mc % 2 == 0:
