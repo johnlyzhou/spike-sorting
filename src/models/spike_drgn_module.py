@@ -102,8 +102,8 @@ class DRGN(nn.Module):
 
     def decode(self, j):
         x, y, z, alpha = j[0, :4]
-        x = self.limit_bounds(x, NP2_X_BOUNDS)
-        y = self.limit_bounds(y, NP2_Y_BOUNDS)
+        # x = self.limit_bounds(x, NP2_X_BOUNDS)
+        # y = self.limit_bounds(y, NP2_Y_BOUNDS)
         shape = j[:, 4:]
         ptp = alpha / (((torch.FloatTensor([x, z])) ** 2).sum() + y ** 2) ** 0.5
         j = self.decoder(shape)
