@@ -1,5 +1,5 @@
 import numpy as np
-import pytorch_lightning as pl
+from pytorch_lightning import LightningModule
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import TensorDataset
@@ -8,7 +8,7 @@ from src.models.components import ConvEncoder, ConvDecoder, VAE
 from src.models.utils.loss_metrics import gaussian_nll, kl_divergence
 
 
-class SpikeSortingVAE(pl.LightningModule):
+class SpikeSortingVAE(LightningModule):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
