@@ -51,7 +51,7 @@ class ConvEncoder(nn.Module):
             layers.append(nn.LeakyReLU(0.05))
 
             in_channels = out_channels
-        
+
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -92,13 +92,13 @@ class ConvDecoder(nn.Module):
                     output_padding=output_padding))
             if use_batch_norm:
                 layers.append(nn.BatchNorm1d(out_channels))
-            
+
             # Don't add activation for last layer
             if i != len(conv_decoder_layers) - 1:
                 layers.append(nn.LeakyReLU(0.05))
 
             in_channels = out_channels
-        
+
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -118,10 +118,10 @@ class AE(nn.Module):
     def encode(self, x):
         output = torch.flatten(self.encoder(x), start_dim=1)
         return self.encoding(output)
-    
+
     def decode(self, encoding):
         return self.decoder(encoding)
-    
+
     def forward(self, x):
         return self.decode(self.encode(x))
 
