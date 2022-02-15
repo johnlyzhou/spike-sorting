@@ -12,6 +12,9 @@ from torch.utils.data.dataloader import DataLoader
 
 from src.models.utils.loss_metrics import gaussian_nll, kl_divergence
 
+NP2_X_BOUNDS = (-150, 182)
+NP2_Y_BOUNDS = (0, 150)
+
 
 # Works for Conv1d and MaxPool1d
 def conv_1d_shape(l_in, kernel_size, stride=1, padding=0, dilation=1):
@@ -71,6 +74,7 @@ class DRGN(nn.Module):
 
         self.encoder = encoder
         self.decoder = decoder
+        self.squash = nn.Tanh()
 
         l_out = conv_1d_shape(l_in, kernel, stride=stride)
         l_out = conv_1d_shape(l_out, kernel, stride=stride)
@@ -79,6 +83,12 @@ class DRGN(nn.Module):
         flattened_dims = reduce(mul, encoder_output_dims)
         self.mean = nn.Linear(flattened_dims, n_latents)
         self.log_var = nn.Linear(flattened_dims, n_latents)
+
+    def limit_bounds(self, x, bounds: Tuple):
+        x = self.squash(x)
+        l, u = bounds
+        x = x / (u - l) + l
+        return x
 
     @staticmethod
     def sample(mean, log_var):
@@ -92,8 +102,10 @@ class DRGN(nn.Module):
 
     def decode(self, j):
         x, y, z, alpha = j[0, :4]
+        x = self.limit_bounds(x, NP2_X_BOUNDS)
+        y = self.limit_bounds(y, NP2_Y_BOUNDS)
         shape = j[:, 4:]
-        ptp = alpha / (((torch.FloatTensor([x, z])) ** 2).sum() + z ** 2) ** 0.5
+        ptp = alpha / (((torch.FloatTensor([x, z])) ** 2).sum() + y ** 2) ** 0.5
         j = self.decoder(shape)
         return j * ptp
 

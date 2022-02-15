@@ -26,7 +26,7 @@ def predict_ptp(template_position, channel_position):
     """
     x, y, z, alpha = template_position
     x_c, z_c = channel_position
-    predicted_ptp = alpha / (((np.array([x - x_c, z - z_c])) ** 2).sum() + z ** 2) ** 0.5
+    predicted_ptp = alpha / (((np.array([x - x_c, z - z_c])) ** 2).sum() + y ** 2) ** 0.5
     return predicted_ptp
 
 
