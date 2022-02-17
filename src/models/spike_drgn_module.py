@@ -61,7 +61,7 @@ class DRGNDecoder(nn.Module):
             nn.LeakyReLU(0.05),
             nn.ConvTranspose1d(out_channels_2, in_channels, kernel, stride=stride),
             nn.BatchNorm1d(in_channels),
-            # nn.Tanh()
+            nn.Tanh()
         )
 
     def forward(self, y):
@@ -101,13 +101,13 @@ class DRGN(nn.Module):
         return self.mean(w), self.log_var(w)
 
     def decode(self, j):
-        x, y, z, alpha = j[0, :4]
+        position = j[0, :4]
         # x = self.limit_bounds(x, NP2_X_BOUNDS)
         # y = self.limit_bounds(y, NP2_Y_BOUNDS)
         shape = j[:, 4:]
-        ptp = alpha / (((torch.FloatTensor([x, z])) ** 2).sum() + y ** 2) ** 0.5
+        ptp = position[3] / ((position[:2] ** 2).sum() + position[2] ** 2) ** 0.5
         j = self.decoder(shape)
-        j = j / (torch.max(j) - torch.min(j))
+        # j = j / (torch.max(j) - torch.min(j))
         return j * ptp
 
     def forward(self, w):
