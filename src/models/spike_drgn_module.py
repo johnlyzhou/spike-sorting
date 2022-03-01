@@ -60,8 +60,7 @@ class DRGNDecoder(nn.Module):
             nn.BatchNorm1d(out_channels_2),
             nn.LeakyReLU(0.05),
             nn.ConvTranspose1d(out_channels_2, in_channels, kernel, stride=stride),
-            nn.BatchNorm1d(in_channels),
-            nn.Tanh()
+            nn.BatchNorm1d(in_channels)
         )
 
     def forward(self, y):
@@ -74,7 +73,6 @@ class DRGN(nn.Module):
 
         self.encoder = encoder
         self.decoder = decoder
-        self.squash = nn.Tanh()
 
         l_out = conv_1d_shape(l_in, kernel, stride=stride)
         l_out = conv_1d_shape(l_out, kernel, stride=stride)
@@ -83,12 +81,6 @@ class DRGN(nn.Module):
         flattened_dims = reduce(mul, encoder_output_dims)
         self.mean = nn.Linear(flattened_dims, n_latents)
         self.log_var = nn.Linear(flattened_dims, n_latents)
-
-    def limit_bounds(self, x, bounds: Tuple):
-        x = self.squash(x)
-        l, u = bounds
-        x = x / (u - l) + l
-        return x
 
     @staticmethod
     def sample(mean, log_var):
@@ -107,7 +99,6 @@ class DRGN(nn.Module):
         shape = j[:, 4:]
         ptp = position[3] / ((position[:2] ** 2).sum() + position[2] ** 2) ** 0.5
         j = self.decoder(shape)
-        # j = j / (torch.max(j) - torch.min(j))
         return j * ptp
 
     def forward(self, w):
